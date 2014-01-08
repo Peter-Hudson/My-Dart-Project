@@ -1,4 +1,5 @@
 import 'dart:html' as dom;
+import 'dart:async';
 
 import 'package:angular/angular.dart';
 import 'package:di/di.dart';
@@ -11,20 +12,26 @@ import 'components/twitter/twitter.dart';
 class MainController {
   
   MainController(Scope scope) {
-     
+
   }
 }
 
 
 
 
-class RecipesRouteInitializer implements RouteInitializer {
-  void init(Router router, ViewFactory view) {
+class PageRouteInitializer implements RouteInitializer {
+  void init(Router router, ViewFactory view) {    
+    print('loading... ${router.activePath}');
     router.root
       ..addRoute(
+        defaultRoute: true,        
         name: 'index',
-        path: '/',
+        path: '/index',
         enter: view('parts/index.html')
+      )..addRoute(
+        name: 'about',
+        path: '/about',
+        enter: view('parts/about.html')
       );
   }
 }
@@ -33,7 +40,7 @@ class RecipesRouteInitializer implements RouteInitializer {
 main() {
   // Set up the Angular directives.
   var module = new Module()
-    ..type(RouteInitializer, implementedBy: RecipesRouteInitializer)
+    ..type(RouteInitializer, implementedBy: PageRouteInitializer)
     ..type(Twitter)
     ..type(MainController);
 

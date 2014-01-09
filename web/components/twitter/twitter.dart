@@ -60,24 +60,16 @@ import 'dart:async';
     }
     
     void loadDisplay(var data) {
-      var results = JSON.decode(data);
-      length = results.length;
-      for (int i = 0; i < length; ++i) {
-        var result = results[i];
-        String user = result['user']['name'];
-        String text = linkwrapper(result['text']);
-        var div = new DivElement()
-          ..setInnerHtml('<div>From: $user</div><div>$text</div>', validator: new NodeValidatorBuilder()
-            ..allowTextElements()
-            ..allowHtml5()
-            ..allowElement('a', attributes: ['href']))
-            ..setAttribute('class', 'tweet-item');
-        domdiv.append(div);
-      }
-      setupPolling();
+      var results = JSON.decode(data);      
+      divListCreate(results, domdiv, results.length);
+      setupPolling();      
     }
     
     void appendTweetFeed(List pasd_results){
+      divListCreate(pasd_results, domcontainer.firstChild, pasd_results.length-length, domdiv.firstChild);      
+    }
+    
+    void divListCreate(List pasd_results,DivElement parent_dom, int max_i,[reference_dom = null]){
       for(int ii = 0; ii < (pasd_results.length-length); ii++){
         var result = pasd_results[ii];
         String user = result['user']['name'];
@@ -88,7 +80,11 @@ import 'dart:async';
             ..allowHtml5()
             ..allowElement('a', attributes: ['href']))
             ..setAttribute('class', 'tweet-item');
-        domcontainer.firstChild.insertBefore(div, domdiv.firstChild);
+        if(reference_dom != null){
+          parent_dom.insertBefore(div, reference_dom);
+        }else{
+          parent_dom.append(div);
+        }
         
       }
       length = pasd_results.length;

@@ -4,6 +4,7 @@ import 'package:angular/angular.dart';
 
 import 'dart:html';
 import 'dart:convert';
+import 'dart:async';
 
 @NgComponent(
     selector: 'twitter',    
@@ -15,11 +16,17 @@ import 'dart:convert';
   class Twitter extends NgShadowRootAware{
     Scope scope;
     Element domdiv;
+    DivElement domcontainer;
+    DivElement domref;
     Compiler compiler;
     Injector injector;
+    int length = 0;
+    var setTimer;
+    Duration durationCount;
+    int duration_time = 10;
 
-    void onShadowRoot(ShadowRoot shadowRoot) {     
-      DivElement domcontainer = shadowRoot.querySelector("#twitter");
+    void onShadowRoot(ShadowRoot shadowRoot) {
+      domcontainer = shadowRoot.querySelector("#twitter");
       domcontainer.append(domdiv);    
       BlockFactory template = compiler([domcontainer]);
       Scope childScope = scope.$new();
@@ -28,9 +35,13 @@ import 'dart:convert';
     }
     
     Twitter(this.compiler, this.injector, this.scope) {
-      domdiv = new DivElement();     
-      var request = HttpRequest.getString("updates.json").then(display);
-      
+      domdiv = new DivElement();
+      domdiv.setAttribute('class','twitter-wrapper');
+      Syncer('updates.json',loadDisplay);
+    }
+    
+    void Syncer(pasd_url,future_func){
+      var request = HttpRequest.getString(pasd_url).then(future_func).catchError((error) => print('Failed to connect ${error.toString()}'));      
     }
     
     // Convert URLs in the text to links.
@@ -48,24 +59,53 @@ import 'dart:convert';
       return buffer.toString();
     }
     
-    void display(var data) {
+    void loadDisplay(var data) {
       var results = JSON.decode(data);
-      int length = results.length;          
+      length = results.length;
       for (int i = 0; i < length; ++i) {
         var result = results[i];
         String user = result['user']['name'];
         String text = linkwrapper(result['text']);
-        var atag = new AnchorElement();
-        
         var div = new DivElement()
           ..setInnerHtml('<div>From: $user</div><div>$text</div>', validator: new NodeValidatorBuilder()
             ..allowTextElements()
             ..allowHtml5()
-            ..allowElement('a', attributes: ['href']));
+            ..allowElement('a', attributes: ['href']))
+            ..setAttribute('class', 'tweet-item');
         domdiv.append(div);
-
       }
+      setupPolling();
     }
     
+    void appendTweetFeed(List pasd_results){
+      for(int ii = 0; ii < (pasd_results.length-length); ii++){
+        var result = pasd_results[ii];
+        String user = result['user']['name'];
+        String text = linkwrapper(result['text']);
+        var div = new DivElement()
+          ..setInnerHtml('<div>From: $user</div><div>$text</div>', validator: new NodeValidatorBuilder()
+            ..allowTextElements()
+            ..allowHtml5()
+            ..allowElement('a', attributes: ['href']))
+            ..setAttribute('class', 'tweet-item');
+        domcontainer.firstChild.insertBefore(div, domdiv.firstChild);
+        
+      }
+      length = pasd_results.length;
+    }
+    
+    void setupPolling(){
+      durationCount = new Duration(seconds: duration_time);
+      new Timer(durationCount, () => Syncer('updates.json',displayChecker));      
+    }    
+    
+    displayChecker(var data){
+      var json_data = JSON.decode(data);
+      if(json_data.length > length){
+        appendTweetFeed(json_data);
+      }
+//      print('running...');
+      return new Timer(durationCount, () => Syncer('updates.json',displayChecker));
+    }
 
 }
